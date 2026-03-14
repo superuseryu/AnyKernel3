@@ -39,9 +39,9 @@ PATCH_VBMETA_FLAG=auto;
 
 # -- Drain getevent buffer + wait for key release --
 flush_keys() {
-  sleep 0.5;
+  sleep 0.1;
   getevent -qlc 5 2>/dev/null || true;
-  sleep 0.2;
+  sleep 0.1;
 }
 
 # -- Read exactly one clean keypress: return 1=VOL+ 2=VOL- --
