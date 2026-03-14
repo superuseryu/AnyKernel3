@@ -65,23 +65,39 @@ choose_source() {
   done
 }
 
-# -- Step 2: Choose KSU variant --
+# -- Step 2: Choose KSU variant (3 options) --
+# VOL+ = cycle through options, VOL- = confirm selection
 choose_ksu() {
   ui_print " ";
   ui_print "  Step 2: Select KSU Variant";
-  ui_print "  VOL + = NoKSU (Vanilla)";
-  ui_print "  VOL - = KSU (Wild-KSU + SUSFS)";
+  ui_print "  VOL + = cycle options";
+  ui_print "  VOL - = confirm selection";
   ui_print " ";
+
+  KSU_OPTION=1;
+  ui_print "  > [1] NoKSU (Vanilla)";
+  ui_print "    [2] Wild-KSU + SUSFS";
+  ui_print "    [3] SukiSU Ultra + SUSFS";
 
   flush_keys;
   while true; do
     input=$(getevent -qlc 1 2>/dev/null | grep -E "KEY_VOLUME(UP|DOWN)");
     case "$input" in
       *KEY_VOLUMEUP*)
-        return 1;
+        KSU_OPTION=$(( KSU_OPTION % 3 + 1 ));
+        ui_print " ";
+        [ "$KSU_OPTION" = "1" ] && ui_print "  > [1] NoKSU (Vanilla)";
+        [ "$KSU_OPTION" = "1" ] && ui_print "    [2] Wild-KSU + SUSFS";
+        [ "$KSU_OPTION" = "1" ] && ui_print "    [3] SukiSU Ultra + SUSFS";
+        [ "$KSU_OPTION" = "2" ] && ui_print "    [1] NoKSU (Vanilla)";
+        [ "$KSU_OPTION" = "2" ] && ui_print "  > [2] Wild-KSU + SUSFS";
+        [ "$KSU_OPTION" = "2" ] && ui_print "    [3] SukiSU Ultra + SUSFS";
+        [ "$KSU_OPTION" = "3" ] && ui_print "    [1] NoKSU (Vanilla)";
+        [ "$KSU_OPTION" = "3" ] && ui_print "    [2] Wild-KSU + SUSFS";
+        [ "$KSU_OPTION" = "3" ] && ui_print "  > [3] SukiSU Ultra + SUSFS";
         ;;
       *KEY_VOLUMEDOWN*)
-        return 2;
+        return $KSU_OPTION;
         ;;
     esac
     sleep 0.1;
@@ -91,102 +107,198 @@ choose_ksu() {
 # -- Detect available images --
 HAS_GKI_KSU=0;
 HAS_GKI_NOKSU=0;
+HAS_GKI_SUKI=0;
 HAS_CLO_KSU=0;
 HAS_CLO_NOKSU=0;
+HAS_CLO_SUKI=0;
 
 [ -f "$AKHOME/Image.gki.ksu" ]   && HAS_GKI_KSU=1;
 [ -f "$AKHOME/Image.gki.noksu" ] && HAS_GKI_NOKSU=1;
+[ -f "$AKHOME/Image.gki.suki" ]  && HAS_GKI_SUKI=1;
 [ -f "$AKHOME/Image.clo.ksu" ]   && HAS_CLO_KSU=1;
 [ -f "$AKHOME/Image.clo.noksu" ] && HAS_CLO_NOKSU=1;
+[ -f "$AKHOME/Image.clo.suki" ]  && HAS_CLO_SUKI=1;
 
 SELECTED_IMAGE="";
 
-# -- Check if AIO (all 4 images available) --
-if [ "$HAS_GKI_KSU" = "1" ] && [ "$HAS_GKI_NOKSU" = "1" ] && \
-   [ "$HAS_CLO_KSU" = "1" ] && [ "$HAS_CLO_NOKSU" = "1" ]; then
+# -- Check if full AIO (all 6 images available) --
+if [ "$HAS_GKI_KSU" = "1" ]   && [ "$HAS_GKI_NOKSU" = "1" ] && [ "$HAS_GKI_SUKI" = "1" ] && \
+   [ "$HAS_CLO_KSU" = "1" ]   && [ "$HAS_CLO_NOKSU" = "1" ] && [ "$HAS_CLO_SUKI" = "1" ]; then
 
   # Step 1: GKI or CLO?
   choose_source;
   SOURCE=$?;
 
-  # Step 2: KSU or NoKSU?
+  # Step 2: NoKSU / Wild-KSU / SukiSU?
   choose_ksu;
   VARIANT=$?;
 
-  if [ "$SOURCE" = "1" ] && [ "$VARIANT" = "2" ]; then
-    SELECTED_IMAGE="Image.gki.ksu";
-    ui_print "  >> GKI + Wild-KSU + SUSFS";
-  elif [ "$SOURCE" = "1" ] && [ "$VARIANT" = "1" ]; then
+  if   [ "$SOURCE" = "1" ] && [ "$VARIANT" = "1" ]; then
     SELECTED_IMAGE="Image.gki.noksu";
     ui_print "  >> GKI Vanilla (NoKSU)";
-  elif [ "$SOURCE" = "2" ] && [ "$VARIANT" = "2" ]; then
-    SELECTED_IMAGE="Image.clo.ksu";
-    ui_print "  >> CLO + Wild-KSU + SUSFS";
+  elif [ "$SOURCE" = "1" ] && [ "$VARIANT" = "2" ]; then
+    SELECTED_IMAGE="Image.gki.ksu";
+    ui_print "  >> GKI + Wild-KSU + SUSFS";
+  elif [ "$SOURCE" = "1" ] && [ "$VARIANT" = "3" ]; then
+    SELECTED_IMAGE="Image.gki.suki";
+    ui_print "  >> GKI + SukiSU Ultra + SUSFS";
   elif [ "$SOURCE" = "2" ] && [ "$VARIANT" = "1" ]; then
     SELECTED_IMAGE="Image.clo.noksu";
     ui_print "  >> CLO Vanilla (NoKSU)";
-  fi
-
-# -- Fallback: partial combinations --
-elif [ "$HAS_GKI_KSU" = "1" ] && [ "$HAS_GKI_NOKSU" = "1" ]; then
-  choose_ksu;
-  if [ $? = "2" ]; then
-    SELECTED_IMAGE="Image.gki.ksu";
-    ui_print "  >> GKI + Wild-KSU + SUSFS";
-  else
-    SELECTED_IMAGE="Image.gki.noksu";
-    ui_print "  >> GKI Vanilla (NoKSU)";
-  fi
-
-elif [ "$HAS_CLO_KSU" = "1" ] && [ "$HAS_CLO_NOKSU" = "1" ]; then
-  choose_ksu;
-  if [ $? = "2" ]; then
+  elif [ "$SOURCE" = "2" ] && [ "$VARIANT" = "2" ]; then
     SELECTED_IMAGE="Image.clo.ksu";
     ui_print "  >> CLO + Wild-KSU + SUSFS";
-  else
-    SELECTED_IMAGE="Image.clo.noksu";
-    ui_print "  >> CLO Vanilla (NoKSU)";
+  elif [ "$SOURCE" = "2" ] && [ "$VARIANT" = "3" ]; then
+    SELECTED_IMAGE="Image.clo.suki";
+    ui_print "  >> CLO + SukiSU Ultra + SUSFS";
   fi
 
+# -- Fallback: 4 images (old AIO without SukiSU) --
+elif [ "$HAS_GKI_KSU" = "1" ] && [ "$HAS_GKI_NOKSU" = "1" ] && \
+     [ "$HAS_CLO_KSU" = "1" ] && [ "$HAS_CLO_NOKSU" = "1" ]; then
+
+  choose_source;
+  SOURCE=$?;
+
+  ui_print " ";
+  ui_print "  Step 2: Select KSU Variant";
+  ui_print "  VOL + = NoKSU (Vanilla)";
+  ui_print "  VOL - = Wild-KSU + SUSFS";
+  ui_print " ";
+
+  flush_keys;
+  while true; do
+    input=$(getevent -qlc 1 2>/dev/null | grep -E "KEY_VOLUME(UP|DOWN)");
+    case "$input" in
+      *KEY_VOLUMEUP*)
+        if [ "$SOURCE" = "1" ]; then
+          SELECTED_IMAGE="Image.gki.noksu";
+          ui_print "  >> GKI Vanilla (NoKSU)";
+        else
+          SELECTED_IMAGE="Image.clo.noksu";
+          ui_print "  >> CLO Vanilla (NoKSU)";
+        fi
+        break;
+        ;;
+      *KEY_VOLUMEDOWN*)
+        if [ "$SOURCE" = "1" ]; then
+          SELECTED_IMAGE="Image.gki.ksu";
+          ui_print "  >> GKI + Wild-KSU + SUSFS";
+        else
+          SELECTED_IMAGE="Image.clo.ksu";
+          ui_print "  >> CLO + Wild-KSU + SUSFS";
+        fi
+        break;
+        ;;
+    esac
+    sleep 0.1;
+  done
+
+# -- Fallback: GKI only (3 variants) --
+elif [ "$HAS_GKI_KSU" = "1" ] && [ "$HAS_GKI_NOKSU" = "1" ] && [ "$HAS_GKI_SUKI" = "1" ]; then
+  choose_ksu;
+  VARIANT=$?;
+  [ "$VARIANT" = "1" ] && SELECTED_IMAGE="Image.gki.noksu" && ui_print "  >> GKI Vanilla (NoKSU)";
+  [ "$VARIANT" = "2" ] && SELECTED_IMAGE="Image.gki.ksu"   && ui_print "  >> GKI + Wild-KSU + SUSFS";
+  [ "$VARIANT" = "3" ] && SELECTED_IMAGE="Image.gki.suki"  && ui_print "  >> GKI + SukiSU Ultra + SUSFS";
+
+# -- Fallback: CLO only (3 variants) --
+elif [ "$HAS_CLO_KSU" = "1" ] && [ "$HAS_CLO_NOKSU" = "1" ] && [ "$HAS_CLO_SUKI" = "1" ]; then
+  choose_ksu;
+  VARIANT=$?;
+  [ "$VARIANT" = "1" ] && SELECTED_IMAGE="Image.clo.noksu" && ui_print "  >> CLO Vanilla (NoKSU)";
+  [ "$VARIANT" = "2" ] && SELECTED_IMAGE="Image.clo.ksu"   && ui_print "  >> CLO + Wild-KSU + SUSFS";
+  [ "$VARIANT" = "3" ] && SELECTED_IMAGE="Image.clo.suki"  && ui_print "  >> CLO + SukiSU Ultra + SUSFS";
+
+# -- Fallback: GKI only (2 variants) --
+elif [ "$HAS_GKI_KSU" = "1" ] && [ "$HAS_GKI_NOKSU" = "1" ]; then
+  ui_print " ";
+  ui_print "  Step 1: Select KSU Variant";
+  ui_print "  VOL + = NoKSU (Vanilla)";
+  ui_print "  VOL - = Wild-KSU + SUSFS";
+  ui_print " ";
+  flush_keys;
+  while true; do
+    input=$(getevent -qlc 1 2>/dev/null | grep -E "KEY_VOLUME(UP|DOWN)");
+    case "$input" in
+      *KEY_VOLUMEUP*)
+        SELECTED_IMAGE="Image.gki.noksu";
+        ui_print "  >> GKI Vanilla (NoKSU)";
+        break;
+        ;;
+      *KEY_VOLUMEDOWN*)
+        SELECTED_IMAGE="Image.gki.ksu";
+        ui_print "  >> GKI + Wild-KSU + SUSFS";
+        break;
+        ;;
+    esac
+    sleep 0.1;
+  done
+
+# -- Fallback: CLO only (2 variants) --
+elif [ "$HAS_CLO_KSU" = "1" ] && [ "$HAS_CLO_NOKSU" = "1" ]; then
+  ui_print " ";
+  ui_print "  Step 1: Select KSU Variant";
+  ui_print "  VOL + = NoKSU (Vanilla)";
+  ui_print "  VOL - = Wild-KSU + SUSFS";
+  ui_print " ";
+  flush_keys;
+  while true; do
+    input=$(getevent -qlc 1 2>/dev/null | grep -E "KEY_VOLUME(UP|DOWN)");
+    case "$input" in
+      *KEY_VOLUMEUP*)
+        SELECTED_IMAGE="Image.clo.noksu";
+        ui_print "  >> CLO Vanilla (NoKSU)";
+        break;
+        ;;
+      *KEY_VOLUMEDOWN*)
+        SELECTED_IMAGE="Image.clo.ksu";
+        ui_print "  >> CLO + Wild-KSU + SUSFS";
+        break;
+        ;;
+    esac
+    sleep 0.1;
+  done
+
 # -- Single image fallbacks --
-elif [ "$HAS_GKI_KSU" = "1" ]; then
-  SELECTED_IMAGE="Image.gki.ksu";
-  ui_print "  >> GKI + Wild-KSU (auto)";
-elif [ "$HAS_GKI_NOKSU" = "1" ]; then
-  SELECTED_IMAGE="Image.gki.noksu";
-  ui_print "  >> GKI Vanilla (auto)";
-elif [ "$HAS_CLO_KSU" = "1" ]; then
-  SELECTED_IMAGE="Image.clo.ksu";
-  ui_print "  >> CLO + Wild-KSU (auto)";
-elif [ "$HAS_CLO_NOKSU" = "1" ]; then
-  SELECTED_IMAGE="Image.clo.noksu";
-  ui_print "  >> CLO Vanilla (auto)";
+elif [ "$HAS_GKI_KSU" = "1" ];   then SELECTED_IMAGE="Image.gki.ksu";   ui_print "  >> GKI + Wild-KSU (auto)";
+elif [ "$HAS_GKI_SUKI" = "1" ];  then SELECTED_IMAGE="Image.gki.suki";  ui_print "  >> GKI + SukiSU (auto)";
+elif [ "$HAS_GKI_NOKSU" = "1" ]; then SELECTED_IMAGE="Image.gki.noksu"; ui_print "  >> GKI Vanilla (auto)";
+elif [ "$HAS_CLO_KSU" = "1" ];   then SELECTED_IMAGE="Image.clo.ksu";   ui_print "  >> CLO + Wild-KSU (auto)";
+elif [ "$HAS_CLO_SUKI" = "1" ];  then SELECTED_IMAGE="Image.clo.suki";  ui_print "  >> CLO + SukiSU (auto)";
+elif [ "$HAS_CLO_NOKSU" = "1" ]; then SELECTED_IMAGE="Image.clo.noksu"; ui_print "  >> CLO Vanilla (auto)";
 
 # -- Legacy fallback: old naming (Image.ksu / Image.noksu) --
 elif [ -f "$AKHOME/Image.ksu" ] && [ -f "$AKHOME/Image.noksu" ]; then
   ui_print "  Legacy package detected (Image.ksu + Image.noksu).";
-  choose_ksu;
-  if [ $? = "2" ]; then
-    SELECTED_IMAGE="Image.ksu";
-    ui_print "  >> KSU";
-  else
-    SELECTED_IMAGE="Image.noksu";
-    ui_print "  >> NoKSU";
-  fi
-elif [ -f "$AKHOME/Image.ksu" ]; then
-  SELECTED_IMAGE="Image.ksu";
-  ui_print "  >> KSU (auto)";
-elif [ -f "$AKHOME/Image.noksu" ]; then
-  SELECTED_IMAGE="Image.noksu";
-  ui_print "  >> NoKSU (auto)";
+  ui_print "  VOL + = NoKSU  |  VOL - = KSU";
+  flush_keys;
+  while true; do
+    input=$(getevent -qlc 1 2>/dev/null | grep -E "KEY_VOLUME(UP|DOWN)");
+    case "$input" in
+      *KEY_VOLUMEUP*)
+        SELECTED_IMAGE="Image.noksu";
+        ui_print "  >> NoKSU";
+        break;
+        ;;
+      *KEY_VOLUMEDOWN*)
+        SELECTED_IMAGE="Image.ksu";
+        ui_print "  >> KSU";
+        break;
+        ;;
+    esac
+    sleep 0.1;
+  done
+elif [ -f "$AKHOME/Image.ksu" ];   then SELECTED_IMAGE="Image.ksu";   ui_print "  >> KSU (auto)";
+elif [ -f "$AKHOME/Image.noksu" ]; then SELECTED_IMAGE="Image.noksu"; ui_print "  >> NoKSU (auto)";
 elif [ -f "$AKHOME/Image" ]; then
   ui_print "  Single kernel image found, flashing...";
 else
   ui_print " ";
   ui_print "ERROR: No kernel image found!";
   ui_print "  Expected one of:";
-  ui_print "  Image.gki.ksu / Image.gki.noksu";
-  ui_print "  Image.clo.ksu / Image.clo.noksu";
+  ui_print "  Image.gki.ksu / Image.gki.noksu / Image.gki.suki";
+  ui_print "  Image.clo.ksu / Image.clo.noksu / Image.clo.suki";
   ui_print " ";
   exit 1;
 fi
@@ -194,11 +306,13 @@ fi
 # -- Move selected image to Image --
 if [ -n "$SELECTED_IMAGE" ]; then
   mv -f "$AKHOME/$SELECTED_IMAGE" "$AKHOME/Image";
-  rm -f "$AKHOME/Image.gki.ksu" \
+  rm -f "$AKHOME/Image.gki.ksu"   \
         "$AKHOME/Image.gki.noksu" \
-        "$AKHOME/Image.clo.ksu" \
+        "$AKHOME/Image.gki.suki"  \
+        "$AKHOME/Image.clo.ksu"   \
         "$AKHOME/Image.clo.noksu" \
-        "$AKHOME/Image.ksu" \
+        "$AKHOME/Image.clo.suki"  \
+        "$AKHOME/Image.ksu"       \
         "$AKHOME/Image.noksu";
 fi
 
