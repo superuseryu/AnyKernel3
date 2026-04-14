@@ -240,41 +240,6 @@ fi
 ## end boot install
 
 
-## ath9k_htc firmware + modules install
-# copies htc_9271.fw and ath9k kernel modules from zip to vendor partition.
-# vendor is mounted rw during AK3 flash in recovery, so writes persist.
-
-ui_print " ";
-ui_print "  Installing ath9k_htc WiFi dongle support...";
-
-# firmware → /vendor/firmware/htc_9271.fw
-if [ -f "$AKHOME/vendor/firmware/htc_9271.fw" ]; then
-  mkdir -p /vendor/firmware;
-  cp -f "$AKHOME/vendor/firmware/htc_9271.fw" /vendor/firmware/htc_9271.fw;
-  set_perm /vendor/firmware/htc_9271.fw 0 0 0644;
-  ui_print "  OK: htc_9271.fw → /vendor/firmware/";
-else
-  ui_print "  ERROR: htc_9271.fw not found in zip — skipping firmware";
-fi
-
-# kernel modules → /vendor/lib/modules/
-if ls "$AKHOME/modules/vendor/"*.ko 1>/dev/null 2>&1; then
-  mkdir -p /vendor/lib/modules;
-  COUNT=0;
-  for ko in "$AKHOME/modules/vendor/"*.ko; do
-    cp -f "$ko" /vendor/lib/modules/;
-    set_perm "/vendor/lib/modules/$(basename $ko)" 0 0 0644;
-    COUNT=$((COUNT + 1));
-  done;
-  ui_print "  OK: $COUNT modules → /vendor/lib/modules/";
-else
-  ui_print "  ERROR: no modules found in zip — skipping";
-fi
-
-ui_print " ";
-## end ath9k install
-
-
 ## init_boot files attributes
 #init_boot_attributes() {
 #set_perm_recursive 0 0 755 644 $RAMDISK/*;
