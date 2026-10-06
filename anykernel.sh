@@ -5,14 +5,14 @@
 # global properties
 properties() { '
 kernel.string=AIO Kernel Pack by superuseryu
-do.devicecheck=0
+do.devicecheck=1
 do.modules=0
 do.systemless=1
 do.cleanup=1
 do.cleanuponabort=0
 device.name1=sapphire
 device.name2=sapphiren
-supported.versions=13-16
+supported.versions=
 supported.patchlevels=
 supported.vendorpatchlevels=
 '; } # end properties
