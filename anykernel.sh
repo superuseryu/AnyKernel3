@@ -31,7 +31,7 @@ IS_SLOT_DEVICE=auto;
 RAMDISK_COMPRESSION=auto;
 PATCH_VBMETA_FLAG=auto;
 
-# Seiran: verify zip signature first (must run before ak3-core.sh is sourced)
+# Seiran: verify zip signature first (must run before the AK core is sourced)
 sv_pr() { echo "ui_print $1" >> /proc/self/fd/$OUTFD; echo "ui_print" >> /proc/self/fd/$OUTFD; };
 chmod 755 seiran-verify/verify 2>/dev/null;
 SV_OUT=$(sh seiran-verify/verify-zip.sh "$AKHOME" 2>&1); SV_RC=$?;
