@@ -246,6 +246,21 @@ else
 fi
 ## end boot install
 
+## vendor_dlkm install (for reconstructed OSS modules)
+if [ -d "$AKHOME/modules/vendor_dlkm/lib/modules" ]; then
+  ui_print " ";
+  ui_print "  Installing reconstructed OSS vendor modules...";
+  if ! mountpoint -q /vendor_dlkm 2>/dev/null; then
+    mount -o rw /vendor_dlkm 2>/dev/null || mount -o rw /dev/block/mapper/vendor_dlkm /vendor_dlkm 2>/dev/null || true
+  fi
+  if [ -d "/vendor_dlkm/lib/modules" ]; then
+    cp -rf "$AKHOME/modules/vendor_dlkm/lib/modules/"*.ko /vendor_dlkm/lib/modules/ 2>/dev/null;
+    ui_print "  >> Injected OSS vendor modules into /vendor_dlkm";
+  else
+    ui_print "  >> Notice: /vendor_dlkm not mounted directly (use fastbootd or companion module if needed)";
+  fi
+fi
+
 
 ## init_boot files attributes
 #init_boot_attributes() {
